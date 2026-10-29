@@ -1,41 +1,50 @@
 /// <reference path="./.sst/platform/config.d.ts" />
 
-import { SSTConfig } from "sst";
-import { EksStack } from "./src/EksStack";
+import { setupSurrealdb } from "./surrealdb";
 
-export default {
-  config(_input) {
-    return {
-      name: "sst-eks-surrealdb",
-      region: "us-east-1",
-    };
-  },
-  stacks(app) {
-    app.stack(EksStack);
-  },
-} satisfies SSTConfig;
+export default $config({
+	app(input) {
+		return {
+			name: "sst-eks-surrealdb",
+			removal: input?.stage === "production" ? "retain" : "remove",
+			home: "aws",
+			providers: {
+				aws: {
+					region: "us-east-1",
+				},
+				eks: "2.7.8",
+				kubernetes: "4.18.1",
+			},
+		};
+	},
+	async run() {
+		const vpc = new sst.aws.Vpc("SurrealDBVpc", {
+			az: 3,
+			nat: "managed",
+		});
 
-// Add SurrealDB resource
-app.addResource("SurrealDB", {
-  type: "Custom",
-  properties: {
-    URL: process.env.SURREALDB_URL,
-    USER: process.env.SURREALDB_USER,
-    PASS: process.env.SURREALDB_PASS,
-    NS: process.env.SURREALDB_NS,
-    DB: process.env.SURREALDB_DB,
-  },
-});
+		const { kubeconfig, surrealdbEndpoint, clusterName } =
+			await setupSurrealdb(vpc);
 
-// Add Hono service
-app.addService("HonoService", {
-  type: "Function",
-  handler: "examples/hono-service/index.handler",
-  environment: {
-    SURREALDB_URL: process.env.SURREALDB_URL,
-    SURREALDB_USER: process.env.SURREALDB_USER,
-    SURREALDB_PASS: process.env.SURREALDB_PASS,
-    SURREALDB_NS: process.env.SURREALDB_NS,
-    SURREALDB_DB: process.env.SURREALDB_DB,
-  },
+		const honoApi = new sst.aws.Function("HonoService", {
+			handler: "examples/hono-service/index.handler",
+			url: true,
+			timeout: "30 seconds",
+			environment: {
+				SURREALDB_URL: surrealdbEndpoint,
+				SURREALDB_USER: process.env.SURREALDB_USER || "root",
+				SURREALDB_PASS:
+					process.env.SURREALDB_PASS || "surrealdb_root_secret",
+				SURREALDB_NS: process.env.SURREALDB_NS || "test",
+				SURREALDB_DB: process.env.SURREALDB_DB || "app",
+			},
+		});
+
+		return {
+			clusterName,
+			surrealdbEndpoint,
+			honoServiceUrl: honoApi.url,
+			kubeconfig,
+		};
+	},
 });

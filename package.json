@@ -1,12 +1,12 @@
 {
   "name": "sst-eks-surrealdb",
   "version": "1.0.0",
-  "description": "SST/Pulumi deployment script for SurrealDB on TiKV",
-  "main": "index.js",
+  "description": "SST v3 (Pulumi) deployment script for SurrealDB on TiKV over Amazon EKS",
+  "main": "sst.config.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "deploy": "sst deploy",
-    "remove": "sst remove"
+    "remove": "sst remove",
+    "dev": "sst dev"
   },
   "keywords": [
     "sst",
@@ -14,17 +14,21 @@
     "surrealdb",
     "tikv",
     "aws",
-    "eks"
+    "eks",
+    "hono"
   ],
-  "author": "",
   "license": "MIT",
   "dependencies": {
-    "aws-cdk-lib": "^2.124.0",
-    "constructs": "^10.3.0",
-    "sst": "^2.40.1"
+    "@pulumi/aws": "^6.66.0",
+    "@pulumi/eks": "^2.7.8",
+    "@pulumi/kubernetes": "^4.18.1",
+    "@pulumi/pulumi": "^3.144.0",
+    "hono": "^4.6.0",
+    "sst": "^3.3.0",
+    "surrealdb": "^1.1.0"
   },
   "devDependencies": {
-    "@types/node": "^20.11.19",
-    "typescript": "^5.3.3"
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.3"
   }
 }
